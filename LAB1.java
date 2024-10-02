@@ -12,26 +12,70 @@ public class Lab1 extends JPanel implements ActionListener, MouseListener {
     private Timer timer;
     private int scor = 0;
     private int timpRamas = 60;
-    private long ultimaActualizare;  // Timpul ultimei actualizări în milisecunde
+    private long ultimaActualizare;
     private Random rand = new Random();
+    private boolean jocInDesfasurare = false;
+
+    private JButton startButton;
+    private JButton stopButton;
+    private JButton restartButton;
 
     public Lab1() {
+        setLayout(new BorderLayout());
+
+        // Creăm butoanele
+        startButton = new JButton("Play");
+        stopButton = new JButton("Stop");
+        restartButton = new JButton("Restart");
+
+        // Adăugăm butoanele într-un panou la sud (jos)
+        JPanel butoanePanou = new JPanel();
+        butoanePanou.add(startButton);
+        butoanePanou.add(stopButton);
+        butoanePanou.add(restartButton);
+        add(butoanePanou, BorderLayout.SOUTH);
+
+        // Adăugăm acțiunile pentru butoane
+        startButton.addActionListener(e -> startGame());
+        stopButton.addActionListener(e -> stopGame());
+        restartButton.addActionListener(e -> restartGame());
+
+        // Inițializare joc
         timer = new Timer(50, this); // Actualizare la fiecare 50ms
-        timer.start();
         addMouseListener(this);
-        ultimaActualizare = System.currentTimeMillis(); // Timpul de start al jocului
+        ultimaActualizare = System.currentTimeMillis();
+    }
+
+    private void startGame() {
+        if (!jocInDesfasurare) {
+            jocInDesfasurare = true;
+            timer.start();
+        }
+    }
+
+    private void stopGame() {
+        jocInDesfasurare = false;
+        timer.stop();
+    }
+
+    private void restartGame() {
+        scor = 0;
+        timpRamas = 60;
+        forme.clear();
+        repaint();
+        startGame();
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // Deseneaza toate formele
+        // Desenează toate formele
         for (Forma f : forme) {
             f.deseneaza(g);
         }
 
-        // Deseneaza scorul si timpul ramas
+        // Desenează scorul și timpul rămas
         g.setColor(Color.BLACK);
         g.drawString("Scor: " + scor, 10, 20);
         g.drawString("Timp rămas: " + timpRamas + " secunde", 10, 40);
@@ -41,49 +85,52 @@ public class Lab1 extends JPanel implements ActionListener, MouseListener {
     public void actionPerformed(ActionEvent e) {
         long acum = System.currentTimeMillis();
 
-        // Actualizează timpul rămas la fiecare secundă
-        if (acum - ultimaActualizare >= 1000) {
-            timpRamas--;
-            ultimaActualizare = acum;
+        if (jocInDesfasurare) {
+            // Actualizează timpul rămas la fiecare secundă
+            if (acum - ultimaActualizare >= 1000) {
+                timpRamas--;
+                ultimaActualizare = acum;
 
-            // Adaugă o nouă formă o dată pe secundă
-            if (timpRamas > 0) {
-                int x = rand.nextInt(getWidth() - 100);
-                int y = rand.nextInt(getHeight() - 100);
-                int dx = rand.nextInt(10) - 5; // viteza pe x
-                int dy = rand.nextInt(10) - 5; // viteza pe y
-                if (rand.nextBoolean()) {
-                    forme.add(new Patrat(x, y, 50, dx, dy)); // Creează un patrat
-                } else {
-                    forme.add(new Cerc(x, y, 50, dx, dy));   // Creează un cerc
+                // Adaugă o nouă formă o dată pe secundă
+                if (timpRamas > 0) {
+                    int x = rand.nextInt(getWidth() - 100);
+                    int y = rand.nextInt(getHeight() - 100);
+                    int dx = rand.nextInt(10) - 5;
+                    int dy = rand.nextInt(10) - 5;
+                    if (rand.nextBoolean()) {
+                        forme.add(new Patrat(x, y, 50, dx, dy)); // Creează un patrat
+                    } else {
+                        forme.add(new Cerc(x, y, 50, dx, dy));   // Creează un cerc
+                    }
+                }
+
+                // Oprește jocul când timpul expira
+                if (timpRamas <= 0) {
+                    stopGame();
+                    JOptionPane.showMessageDialog(this, "Timpul a expirat! Scor final: " + scor);
                 }
             }
 
-            // Oprește jocul când timpul expira
-            if (timpRamas <= 0) {
-                timer.stop();
-                JOptionPane.showMessageDialog(this, "Timpul a expirat! Scor final: " + scor);
-                System.exit(0);
+            // Actualizează poziția fiecărei forme
+            for (Forma f : forme) {
+                f.misca(getWidth(), getHeight());
             }
-        }
 
-        // Actualizează poziția fiecărei forme
-        for (Forma f : forme) {
-            f.misca(getWidth(), getHeight());
+            repaint(); // Redesenare fereastră
         }
-
-        repaint(); // Redesenare fereastra
     }
 
     @Override
     public void mouseClicked(MouseEvent e) {
-        for (int i = 0; i < forme.size(); i++) {
-            Forma f = forme.get(i);
-            if (f.continePunct(e.getX(), e.getY())) {
-                forme.remove(i); // Sterge forma pe care s-a dat click
-                scor++; // Crește scorul
-                repaint();
-                break;
+        if (jocInDesfasurare) {
+            for (int i = 0; i < forme.size(); i++) {
+                Forma f = forme.get(i);
+                if (f.continePunct(e.getX(), e.getY())) {
+                    forme.remove(i); // Șterge forma pe care s-a dat click
+                    scor++; // Crește scorul
+                    repaint();
+                    break;
+                }
             }
         }
     }
@@ -101,7 +148,7 @@ public class Lab1 extends JPanel implements ActionListener, MouseListener {
         JFrame frame = new JFrame("Joc cu forme mobile");
         Lab1 joc = new Lab1();
         frame.add(joc);
-        frame.setSize(800, 600); // Dimensiunea ferestrei
+        frame.setSize(800, 600);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
     }
